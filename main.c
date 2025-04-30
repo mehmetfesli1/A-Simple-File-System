@@ -1,11 +1,11 @@
-/ ACADEMIC INTEGRITY PLEDGE
+// ACADEMIC INTEGRITY PLEDGE
 //
 // - I have not used source code obtained from another student nor
 //   any other unauthorized source, either modified or unmodified.
 //
 // - All source code and documentation used in my program is either
 //   my original work or was derived by me from the source code
-//   published in the textbook for this course or presented in
+//   published in the textbook for this course or presentged in
 //   class.
 //
 // - I have not discussed coding details about this project with
@@ -19,7 +19,7 @@
 //
 //
 //
-// Signed:_____________________________________ Date:_____________
+// Signed: Mehmet Fesli Date:_____________
 
 //filesys.c
 //Based on a program by Michael Black, 2007
@@ -31,6 +31,47 @@ int main(int argc, char* argv[])
 {
 	int i, j, size, noSecs, startPos;
 
+    // if(argc < 2) {
+    //     fprintf(stderr, "How to use: %s OPTION [filename]\n", argv[0]);
+    //     printf("OPTIONS:\n");
+    //     printf("  L - List files on disk\n");
+    //     printf("  P filename - Print contents of text file\n");
+    //     printf("  M filename - Create a new text file\n");
+    //     printf("  D filename - Delete a file\n");
+
+    //     return 1;
+    // }
+
+    if (argc < 2) {
+        printf("\n╔═══════════════════════════════════════════════════════════╗\n");
+        printf("║     🌟 WELCOME TO THE RETRO FLOPPY FILE SYSTEM! 🌟        ║\n");
+        printf("╠═══════════════════════════════════════════════════════════╣\n");
+        printf("║  Available Commands:                                      ║\n");
+        printf("║                                                           ║\n");
+        printf("║  📋 ./filesys L                                           ║\n");
+        printf("║     Show all files on your virtual floppy                 ║\n");
+        printf("║                                                           ║\n");
+        printf("║  📖 ./filesys P filename                                  ║\n");
+        printf("║     Read the contents of a text file                      ║\n");
+        printf("║                                                           ║\n");
+        printf("║  ✏️  ./filesys M filename                                 ║\n");
+        printf("║     Create a new text file on the floppy                  ║\n");
+        printf("║                                                           ║\n");
+        printf("║  🗑️  ./filesys D filename                                 ║\n");
+        printf("║     Delete a file from the floppy                         ║\n");
+        printf("╚═══════════════════════════════════════════════════════════╝\n");
+        return 1;
+    }
+
+    char option = argv[1][0];  // First character of the first argument
+
+    // Yields an error message for any other option
+    if (option != 'L' && option != 'P' && option != 'M' && option != 'D') {
+        printf("\n⚠️  Command not recognized! Please use L, P, M, or D. ⚠️\n");
+        printf("Type './filesys' without parameters to see all available commands.\n\n");
+        return 1;
+    }
+    
 	//open the floppy image
 	FILE* floppy;
 	floppy=fopen("floppya.img","r+");
@@ -85,13 +126,42 @@ int main(int argc, char* argv[])
 	}
 
 
-/*
+
 	//write the map and directory back to the floppy image
     fseek(floppy,512*256,SEEK_SET);
     for (i=0; i<512; i++) fputc(map[i],floppy);
 
     fseek(floppy,512*257,SEEK_SET);
     for (i=0; i<512; i++) fputc(dir[i],floppy);
-*/
+
 	fclose(floppy);
+
+
+    // switch (option) {
+    //     case 'L':
+    //         // Print directory listing
+    //         printf("Disk directory:\n");
+    //         printf("Name        Size\n");
+            
+    //         int totalUsed = 0;
+
+            
+    //         for (i=0; i<512; i=i+16) {
+
+    //             // skip empty entries
+    //             if (dir[i]==0) continue;
+
+    //             // prints filename
+    //             for (j=0; j<8; j++) {
+    //                 if (dir[i+j]==0) printf(" "); else printf("%c",dir[i+j]);
+    //             }
+
+
+
+
+
+
+
+
+
 }
