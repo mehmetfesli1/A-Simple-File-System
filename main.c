@@ -245,17 +245,171 @@ void printFile(char* map, char* dir, char* filename, FILE* floppy){
 
 
 void makeFile(char* map, char* dir, char* filename, FILE* floppy){
-
-
-
+    int i;
+    int freeEntry = -1;
+    int freeSector = -1;
+    char buffer[SECTOR_SIZE];
+    char trimmedName[MAX_LENGTH_FILENAME + 1];
+    
+    // Let's trim the filename to 8 characters max
+    memset(trimmedName, 0, MAX_LENGTH_FILENAME + 1);
+    strncpy(trimmedName, filename, MAX_LENGTH_FILENAME);
+    
+    // Look for duplicate files and an empty directory slot
+    for (i = 0; i < SECTOR_SIZE; i += 16) {
+        // Found an empty spot? Remember it for later
+        if (dir[i] == 0) {
+            if (freeEntry == -1) freeEntry = i;
+            continue;
+        }
+        
+        // Check if this file already exists
+        char entryName[MAX_LENGTH_FILENAME + 1] = {0};
+        int j;
+        for (j = 0; j < MAX_LENGTH_FILENAME && dir[i + j] != 0; j++) {
+            entryName[j] = dir[i + j];
+        }
+        
+        if (strcmp(entryName, trimmedName) == 0) {
+            printf("\n❌ Oops! A file named '%s' already exists!\n", trimmedName);
+            printf("   Try a different name.\n\n");
+            return;
+        }
+    }
+    
+    // No empty directory slots? That's a problem
+    if (freeEntry == -1) {
+        printf("\n💾 Directory is full! Delete some files first.\n\n");
+        return;
+    }
+    
+    // Now let's find an empty sector for our file data
+    for (i = 0; i < SECTOR_SIZE; i++) {
+        if (map[i] == 0) {  // This sector is free
+            freeSector = i;
+            break;
+        }
+    }
+    
+    if (freeSector == -1) {
+        printf("\n💾 Disk is full! Delete some files to make space.\n\n");
+        return;
+    }
+    
+    // Let's get the file content from the user
+    printf("\n✏️  Creating new file: %s.t\n", trimmedName);
+    printf("╔════════════════════════════════════════════╗\n");
+    printf("║ Type your text below (press Enter when done)║\n");
+    printf("╚════════════════════════════════════════════╝\n");
+    printf("▶ ");
+    
+    // Clear the buffer and get user input
+    memset(buffer, 0, SECTOR_SIZE);
+    if (fgets(buffer, SECTOR_SIZE, stdin) == NULL) {
+        printf("\n❌ Couldn't read your input!\n\n");
+        return;
+    }
+    
+    // Remove the newline character
+    size_t len = strcspn(buffer, "\n");
+    if (len < SECTOR_SIZE) {
+        buffer[len] = 0;
+    }
+    
+    // Fill in the directory entry for our new file
+    memset(&dir[freeEntry], 0, 16);
+    strncpy(&dir[freeEntry], trimmedName, MAX_LENGTH_FILENAME);
+    dir[freeEntry + 8] = TEXT_FILE;
+    dir[freeEntry + 9] = freeSector;
+    dir[freeEntry + 10] = 1;
+    
+    // Mark this sector as used
+    map[freeSector] = -1;
+    
+    // Write the file data to disk
+    fseek(floppy, SECTOR_SIZE * freeSector, SEEK_SET);
+    fwrite(buffer, 1, SECTOR_SIZE, floppy);
+    
+    // Save our changes to the map and directory
+    writeBackToDisk(map, dir, floppy);
+    
+    size_t contentLength = strlen(buffer);
+    printf("\n✅ File '%s.t' created with %zu bytes.\n\n", trimmedName, contentLength);
 }
 
 // Definition for D option
-void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
+void deleteFile(char* map, char* dir, char* filename, FILE* floppy){}
+//     int i, j;
+//     int fileFound = 0;
+//     int dirEntry = -1;
+//     int startSector = 0;
+//     int sectorCount = 0;
+//     char fileType;
+//     char fullname[MAX_LENGTH_FILENAME + 3]; // +3 for the extension and null terminator
+    
+//     // Search for file in directory
+//     for (i = 0; i < SECTOR_SIZE; i += 16) {
+//         if (dir[i] == 0) continue; // Skip empty entries
+        
+//         // Check if filename matches
+//         int match = 1;
+//         for (j = 0; j < MAX_LENGTH_FILENAME && filename[j] != '\0'; j++) {
+//             if (dir[i + j] != filename[j]) {
+//                 match = 0;
+//                 break;
+//             }
+//         }
+        
+//         if (match) {
+//             fileFound = 1;
+//             dirEntry = i;
+//             fileType = dir[i + 8];
+//             startSector = dir[i + 9];
+//             sectorCount = dir[i + 10];
+//             break;
+//         }
+//     }
+    
+//     if (!fileFound) {
+//         printf("\n🔍 Cannot delete '%s': File not found on this floppy disk!\n\n", filename);
+//         return;
+//     }
+    
+//     // Create the full filename with extension for display
+//     strncpy(fullname, filename, MAX_LENGTH_FILENAME);
+//     fullname[MAX_LENGTH_FILENAME] = '.';
+//     fullname[MAX_LENGTH_FILENAME + 1] = (fileType == TEXT_FILE) ? 't' : 'x';
+//     fullname[MAX_LENGTH_FILENAME + 2] = '\0';
+    
+//     // Ask for confirmation
+//     char confirm;
+//     printf("\n⚠️  WARNING: You are about to delete '%s'!\n", fullname);
+//     printf("   This will permanently remove the file from the disk.\n");
+//     printf("   Continue? (y/n): ");
+//     scanf(" %c", &confirm);
+    
+//     if (confirm != 'y' && confirm != 'Y') {
+//         printf("\n✋ Deletion cancelled. Your file is safe!\n\n");
+//         return;
+//     }
+    
+//     // Clear directory entry (set first byte to 0)
+//     dir[dirEntry] = 0;
+    
+//     // Free sectors in map
+//     for (i = 0; i < sectorCount; i++) {
+//         map[startSector + i] = 0;
+//     }
+    
+//     // Write map and directory back to disk
+//     writeBackToDisk(map, dir, floppy);
+    
+//     printf("\n🗑️  Success! File '%s' has been deleted.\n", fullname);
+//     printf("   %d sectors (%d bytes) have been freed up.\n\n", 
+//            sectorCount, sectorCount * SECTOR_SIZE);
 
 
-
-}
+//}
 
 // writes back to the disk
 // puts the original code that writes back the map and directory back to the disk into a function for reusability
