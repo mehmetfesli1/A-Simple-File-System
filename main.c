@@ -258,9 +258,17 @@ void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
 }
 
 // writes back to the disk
+// puts the original code that writes back the map and directory back to the disk into a function for reusability
 void writeBackToDisk(char* map, char* dir, FILE* floppy){
-
-
+    int i;
+    
+    // Write map back to disk
+    fseek(floppy, SECTOR_SIZE * MAP_SECTOR, SEEK_SET);
+    for (i = 0; i < SECTOR_SIZE; i++)fputc(map[i], floppy);
+    
+    // Write directory back to disk
+    fseek(floppy, SECTOR_SIZE * DIRECTORY_SECTOR, SEEK_SET);
+    for (i = 0; i < SECTOR_SIZE; i++) fputc(dir[i], floppy);
 
 }
 
