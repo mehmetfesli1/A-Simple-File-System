@@ -19,7 +19,7 @@
 //
 //
 //
-// Signed: Mehmet Fesli Date:_____________
+// Signed: Mehmet Fesli Date: 05/01/2025
 
 //filesys.c
 //Based on a program by Michael Black, 2007
@@ -28,21 +28,21 @@
 #include <stdio.h>
 #include <string.h>
 
-// CONSTANTS for the filesystem
+// Just defining some constants to use - makes the code cleaner!
 #define MAX_LENGTH_FILENAME 8
 #define TEXT_FILE 't'
 #define EXEC_FILE 'x'
 #define DIRECTORY_SECTOR 257
 #define MAP_SECTOR 256
 #define SECTOR_SIZE 512
-#define MAX_BUFFER_SIZE 12288 // Maximum file size (24 sectors)
+#define MAX_BUFFER_SIZE 12288 // Max file size (24 sectors)
 
-// Function prototypes
+// Functions I need to implement
 void listFiles(char* map, char* dir);
 void printFile(char* map, char* dir, char* filename, FILE* floppy);
 void makeFile(char* map, char* dir, char* filename, FILE* floppy);
 void deleteFile(char* map, char* dir, char* filename, FILE* floppy);
-void writeBackToDisk(char* map, char* dir, FILE* floppy);
+void writeBackToDisk(char* map, char* dir, FILE* floppy); // helper function
 
 
 int main(int argc, char* argv[])
@@ -50,6 +50,7 @@ int main(int argc, char* argv[])
 	int i, j, size, noSecs, startPos;
     char filename[MAX_LENGTH_FILENAME + 1]; // +1 for null terminator
 
+    // Menu display for the user know the list of options they can run
     if (argc < 2) {
         printf("\n╔═══════════════════════════════════════════════════════════╗\n");
         printf("║     🌟 WELCOME TO THE RETRO FLOPPY FILE SYSTEM! 🌟        ║\n");
@@ -71,9 +72,9 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    char option = argv[1][0];  // First character of the first argument
+    char option = argv[1][0];  // Get first char of first arg
 
-    // Yields an error message for any other option
+    // Error messages for bad options
     if (option != 'L' && option != 'P' && option != 'M' && option != 'D') {
         printf("\n⚠️  Command not recognized! Please use L, P, M, or D. ⚠️\n");
         printf("Type './filesys' without parameters to see all available commands.\n\n");
@@ -86,7 +87,7 @@ int main(int argc, char* argv[])
     }
 
     if (option != 'L') {
-        // Copy filename from command line
+        // Copy the filename from command prompt
         strncpy(filename, argv[2], MAX_LENGTH_FILENAME);
         filename[MAX_LENGTH_FILENAME] = '\0'; // Ensure null termination
     }
@@ -114,7 +115,7 @@ int main(int argc, char* argv[])
 		dir[i]=fgetc(floppy);
 
 
-    // switch statement to choose which function run
+    // figure out which command to run
     switch (option) {
         case 'L':
             listFiles(map, dir);
@@ -150,21 +151,21 @@ void listFiles(char* map, char* dir){
     printf("Name      Size (bytes)\n");
     printf("--------------------\n");
     
-    // Go through directory entries
+    // Go thru directory entries
     for (i = 0; i < SECTOR_SIZE; i += 16) {
-        if (dir[i] == 0) continue; // Hopefully skips empty entries
+        if (dir[i] == 0) continue; // skip empty entries
         
-        // to extract and print filename in proper format
+        // extract and print filename in 8.3 format
         for (j = 0; j < MAX_LENGTH_FILENAME; j++) {
             if (dir[i + j] == 0) break;
             filename[j] = dir[i + j];
         }
         filename[j] = '\0';
         
-        // Get file type (for extension)
+        // figure out file type for extension
         extension = (dir[i + 8] == TEXT_FILE) ? 't' : 'x';
         
-        // Calculate file size in bytes
+        // calculate file size & update totals
         int fileSize = 512 * dir[i + 10];
         totalUsed += fileSize;
         totalFiles++;
@@ -172,10 +173,10 @@ void listFiles(char* map, char* dir){
         printf("%s.%c      %d\n", filename, extension, fileSize);
     }
     
-    // Calculate and print total space statistics
+    // Print summary info
     printf("\nTotal files: %d\n", totalFiles);
     printf("Space used: %d bytes\n", totalUsed);
-    printf("Space free: %d bytes\n", 261632 - totalUsed);
+    printf("Space free: %d bytes\n", 261632 - totalUsed); // total space is 512 sectors - 1
 }
 
 
@@ -188,10 +189,11 @@ void printFile(char* map, char* dir, char* filename, FILE* floppy){
     char fileType;
     char buffer[MAX_BUFFER_SIZE];
     
-    // Search for file in directory
+    // Look for the file in directory
     for (i = 0; i < SECTOR_SIZE; i += 16) {
-        if (dir[i] == 0) continue; // Skip empty entries
-        // Check if filename matches
+        if (dir[i] == 0) continue; // skip empty entries
+        
+        // check if filename matches
         int match = 1;
         for (j = 0; j < MAX_LENGTH_FILENAME && filename[j] != '\0'; j++) {
             if (dir[i + j] != filename[j]) {
@@ -199,12 +201,12 @@ void printFile(char* map, char* dir, char* filename, FILE* floppy){
                 break;
             }
         }
-        // If we've matched so far, make sure we've reached the end of the filename
-        // This is a failscheck to prevent the code to match a file with partial input.
-        // Before this check, it used to print out the contents of msg when I just inputted 'm'
-        // Now it verifies the remainder of the directory entry name is zeros.
+        
+        // Fixed the partial match bug - need exact match!
+        // Had a weird issue where typing "m" would print contents of "msg"
+        // Now it makes sure the input is matched with the file name before printing its contents
         if (match && filename[j] == '\0') {
-            // Verify remainder of directory entry name field is just zeros
+            // Make sure rest of name field is zeros
             for (; j < MAX_LENGTH_FILENAME; j++) {
                 if (dir[i + j] != 0) {
                     match = 0;
@@ -212,6 +214,7 @@ void printFile(char* map, char* dir, char* filename, FILE* floppy){
                 }
             }
         }
+        
         if (match) {
             fileFound = 1;
             fileType = dir[i + 8];
@@ -219,22 +222,26 @@ void printFile(char* map, char* dir, char* filename, FILE* floppy){
             sectorCount = dir[i + 10];
             break;
         }
-    } if (fileFound == 0) {
+    } 
+    
+    // handle errors
+    if (fileFound == 0) {
         printf("Error: File not found.\n");
         return;
-    } if (fileType != TEXT_FILE) {
+    } 
+    if (fileType != TEXT_FILE) {
         printf("Error: Cannot print non-text file.\n");
         return;
     }
     
-    // Load the file contents to the buffer
+    // Load file contents into buffer
     int fileSize = sectorCount * SECTOR_SIZE;
     fseek(floppy, SECTOR_SIZE * startSector, SEEK_SET);
     for (i = 0; i < fileSize && i < MAX_BUFFER_SIZE; i++) {
         buffer[i] = fgetc(floppy);
     }
     
-    // Must print the file contents until the null terminator
+    // Print the contents
     printf("File contents:\n");
     printf("-------------\n");
     for (i = 0; i < fileSize && buffer[i] != 0; i++) {
@@ -246,24 +253,24 @@ void printFile(char* map, char* dir, char* filename, FILE* floppy){
 
 void makeFile(char* map, char* dir, char* filename, FILE* floppy){
     int i;
-    int freeEntry = -1;
-    int freeSector = -1;
+    int freeEntry = -1; // no free entry found yet
+    int freeSector = -1; // no free sector found yet
     char buffer[SECTOR_SIZE];
     char trimmedName[MAX_LENGTH_FILENAME + 1];
     
-    // Let's trim the filename to 8 characters max
+    // Trim filename to 8 chars max (DOS style)
     memset(trimmedName, 0, MAX_LENGTH_FILENAME + 1);
     strncpy(trimmedName, filename, MAX_LENGTH_FILENAME);
     
-    // Look for duplicate files and an empty directory slot
+    // Check for duplicates & find empty spot
     for (i = 0; i < SECTOR_SIZE; i += 16) {
-        // Found an empty spot? Remember it for later
+        // Empty dir entry? save it
         if (dir[i] == 0) {
             if (freeEntry == -1) freeEntry = i;
             continue;
         }
         
-        // Check if this file already exists
+        // check if file exists already
         char entryName[MAX_LENGTH_FILENAME + 1] = {0};
         int j;
         for (j = 0; j < MAX_LENGTH_FILENAME && dir[i + j] != 0; j++) {
@@ -271,73 +278,73 @@ void makeFile(char* map, char* dir, char* filename, FILE* floppy){
         }
         
         if (strcmp(entryName, trimmedName) == 0) {
-            printf("\n❌ Oops! A file named '%s' already exists!\n", trimmedName);
+            printf("\n!! Oops! A file named '%s' already exists!\n", trimmedName);
             printf("   Try a different name.\n\n");
             return;
         }
     }
     
-    // No empty directory slots? That's a problem
+    // no empty dir slots? display error
     if (freeEntry == -1) {
-        printf("\n💾 Directory is full! Delete some files first.\n\n");
+        printf("\n!! Directory is full! Delete some files first.\n\n");
         return;
     }
     
-    // Now let's find an empty sector for our file data
+    // Find a free sector to use
     for (i = 0; i < SECTOR_SIZE; i++) {
-        if (map[i] == 0) {  // This sector is free
+        if (map[i] == 0) {  // 0 = free sector
             freeSector = i;
             break;
         }
     }
     
     if (freeSector == -1) {
-        printf("\n💾 Disk is full! Delete some files to make space.\n\n");
+        printf("\n!! Disk is full! Delete some files to make space.\n\n");
         return;
     }
     
-    // Let's get the file content from the user
-    printf("\n✏️  Creating new file: %s.t\n", trimmedName);
-    printf("╔════════════════════════════════════════════╗\n");
+    // Get user input for file content
+    printf("\n Creating new file: %s.t\n", trimmedName);
+    printf("╔═════════════════════════════════════════════╗\n");
     printf("║ Type your text below (press Enter when done)║\n");
-    printf("╚════════════════════════════════════════════╝\n");
+    printf("╚═════════════════════════════════════════════╝\n");
     printf("▶ ");
     
-    // Clear the buffer and get user input
+    // Clear buffer & get input
     memset(buffer, 0, SECTOR_SIZE);
     if (fgets(buffer, SECTOR_SIZE, stdin) == NULL) {
-        printf("\n❌ Couldn't read your input!\n\n");
+        printf("\n Couldn't read your input!\n\n");
         return;
     }
     
-    // Remove the newline character
+    // get rid of the newline that fgets adds
     size_t len = strcspn(buffer, "\n");
     if (len < SECTOR_SIZE) {
         buffer[len] = 0;
     }
     
-    // Fill in the directory entry for our new file
+    // create the dir entry
     memset(&dir[freeEntry], 0, 16);
     strncpy(&dir[freeEntry], trimmedName, MAX_LENGTH_FILENAME);
-    dir[freeEntry + 8] = TEXT_FILE;
-    dir[freeEntry + 9] = freeSector;
-    dir[freeEntry + 10] = 1;
+    dir[freeEntry + 8] = TEXT_FILE;  // t for text file
+    dir[freeEntry + 9] = freeSector; // where it starts
+    dir[freeEntry + 10] = 1;         // use 1 sector
     
-    // Mark this sector as used
-    map[freeSector] = -1;
+    // mark sector as used
+    map[freeSector] = -1;  // -1 = FF = used
     
-    // Write the file data to disk
+    // write file to disk
     fseek(floppy, SECTOR_SIZE * freeSector, SEEK_SET);
     fwrite(buffer, 1, SECTOR_SIZE, floppy);
     
-    // Save our changes to the map and directory
+    // update directory and map
     writeBackToDisk(map, dir, floppy);
     
     size_t contentLength = strlen(buffer);
     printf("\n✅ File '%s.t' created with %zu bytes.\n\n", trimmedName, contentLength);
 }
 
-// Definition for D option
+// Function for D option - to delete a file
 void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
     int i, j;
     int fileFound = 0;
@@ -345,13 +352,13 @@ void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
     int startSector = 0;
     int sectorCount = 0;
     char fileType;
-    char fullname[MAX_LENGTH_FILENAME + 3]; // +3 for the extension and null terminator
+    char fullname[MAX_LENGTH_FILENAME + 3]; // +3 for extension & null
     
-    // Search for file in directory
+    // Find the file
     for (i = 0; i < SECTOR_SIZE; i += 16) {
-        if (dir[i] == 0) continue; // Skip empty entries
+        if (dir[i] == 0) continue; // skip empty entries
         
-        // Check if filename matches
+        // check if filename matches
         int match = 1;
         for (j = 0; j < MAX_LENGTH_FILENAME && filename[j] != '\0'; j++) {
             if (dir[i + j] != filename[j]) {
@@ -359,11 +366,9 @@ void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
                 break;
             }
         }
-         // This is a failscheck to prevent the code to match a file with partial input.
-        // Before this check, it used to print out the contents of msg when I just inputted 'm'
-        // Now it verifies the remainder of the directory entry name is zeros.
+        
+        // same fix as in printFile - need exact match
         if (match && filename[j] == '\0') {
-            // Verify remainder of directory entry name field is just zeros
             for (; j < MAX_LENGTH_FILENAME; j++) {
                 if (dir[i + j] != 0) {
                     match = 0;
@@ -371,6 +376,7 @@ void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
                 }
             }
         }
+        
         if (match) {
             fileFound = 1;
             dirEntry = i;
@@ -382,136 +388,54 @@ void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
     }
     
     if (!fileFound) {
-        printf("\n🔍 Cannot delete '%s': File not found on this floppy disk!\n\n", filename);
+        printf("\n!! Cannot delete '%s': File not found on this floppy disk!\n\n", filename);
         return;
     }
     
-    // Create the full filename with extension for display
+    // Build full filename with extension for display
     strncpy(fullname, filename, MAX_LENGTH_FILENAME);
     fullname[MAX_LENGTH_FILENAME] = '.';
     fullname[MAX_LENGTH_FILENAME + 1] = (fileType == TEXT_FILE) ? 't' : 'x';
     fullname[MAX_LENGTH_FILENAME + 2] = '\0';
     
-    // Ask for confirmation
+    // Double-check with user
     char confirm;
-    printf("\n⚠️  WARNING: You are about to delete '%s'!\n", fullname);
+    printf("\n!! WARNING: You are about to delete '%s'!\n", fullname);
     printf("   This will permanently remove the file from the disk.\n");
     printf("   Continue? (y/n): ");
     scanf(" %c", &confirm);
     
     if (confirm != 'y' && confirm != 'Y') {
-        printf("\n✋ Deletion cancelled. Your file is safe!\n\n");
+        printf("\n!! Deletion cancelled. Your file is safe!\n\n");
         return;
     }
     
-    // Clear directory entry (set first byte to 0)
+    // Empty the directory entry - just set first byte to 0
     dir[dirEntry] = 0;
     
-    // Free sectors in map
+    // Free up disk sectors
     for (i = 0; i < sectorCount; i++) {
-        map[startSector + i] = 0;
+        map[startSector + i] = 0;  // mark as free
     }
     
-    // Write map and directory back to disk
+    // Save changes
     writeBackToDisk(map, dir, floppy);
     
-    printf("\n🗑️  Success! File '%s' has been deleted.\n", fullname);
+    printf("\n!! Success! File '%s' has been deleted.\n", fullname);
     printf("   %d sectors (%d bytes) have been freed up.\n\n", 
            sectorCount, sectorCount * SECTOR_SIZE);
-
-
 }
 
-// writes back to the disk
-// puts the original code that writes back the map and directory back to the disk into a function for reusability
+// Helper function to write changes back to disk
+// Saves typing the same code over and over
 void writeBackToDisk(char* map, char* dir, FILE* floppy){
     int i;
     
-    // Write map back to disk
+    // Save map back to sector 256
     fseek(floppy, SECTOR_SIZE * MAP_SECTOR, SEEK_SET);
     for (i = 0; i < SECTOR_SIZE; i++)fputc(map[i], floppy);
     
-    // Write directory back to disk
+    // Save directory back to sector 257
     fseek(floppy, SECTOR_SIZE * DIRECTORY_SECTOR, SEEK_SET);
     for (i = 0; i < SECTOR_SIZE; i++) fputc(dir[i], floppy);
-
 }
-
-
-
-// {
-
-
-
-//     //print disk map
-// 	printf("Disk usage map:\n");
-// 	printf("      0 1 2 3 4 5 6 7 8 9 A B C D E F\n");
-// 	printf("     --------------------------------\n");
-// 	for (i=0; i<16; i++) {
-// 		switch(i) {
-// 			case 15: printf("0xF_ "); break;
-// 			case 14: printf("0xE_ "); break;
-// 			case 13: printf("0xD_ "); break;
-// 			case 12: printf("0xC_ "); break;
-// 			case 11: printf("0xB_ "); break;
-// 			case 10: printf("0xA_ "); break;
-// 			default: printf("0x%d_ ", i); break;
-// 		}
-// 		for (j=0; j<16; j++) {
-// 			if (map[16*i+j]==-1) printf(" X"); else printf(" .");
-// 		}
-// 		printf("\n");
-// 	}
-
-//     // print directory
-// 	printf("\nDisk directory:\n");
-// 	printf("Name    Type Start Length\n");
-//     for (i=0; i<512; i=i+16) {
-// 		if (dir[i]==0) break;
-// 		for (j=0; j<8; j++) {
-// 			if (dir[i+j]==0) printf(" "); else printf("%c",dir[i+j]);
-// 		}
-// 		if ((dir[i+8]=='t') || (dir[i+8]=='T')) printf("text"); else printf("exec");
-// 		printf(" %5d %6d bytes\n", dir[i+9], 512*dir[i+10]);
-// 	}
-
-
-
-// 	//write the map and directory back to the floppy image
-//     fseek(floppy,512*256,SEEK_SET);
-//     for (i=0; i<512; i++) fputc(map[i],floppy);
-
-//     fseek(floppy,512*257,SEEK_SET);
-//     for (i=0; i<512; i++) fputc(dir[i],floppy);
-
-// 	fclose(floppy);
-
-
-//     // switch (option) {
-//     //     case 'L':
-//     //         // Print directory listing
-//     //         printf("Disk directory:\n");
-//     //         printf("Name        Size\n");
-            
-//     //         int totalUsed = 0;
-
-            
-//     //         for (i=0; i<512; i=i+16) {
-
-//     //             // skip empty entries
-//     //             if (dir[i]==0) continue;
-
-//     //             // prints filename
-//     //             for (j=0; j<8; j++) {
-//     //                 if (dir[i+j]==0) printf(" "); else printf("%c",dir[i+j]);
-//     //             }
-
-
-
-
-
-
-
-
-
-// }
