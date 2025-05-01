@@ -338,78 +338,89 @@ void makeFile(char* map, char* dir, char* filename, FILE* floppy){
 }
 
 // Definition for D option
-void deleteFile(char* map, char* dir, char* filename, FILE* floppy){}
-//     int i, j;
-//     int fileFound = 0;
-//     int dirEntry = -1;
-//     int startSector = 0;
-//     int sectorCount = 0;
-//     char fileType;
-//     char fullname[MAX_LENGTH_FILENAME + 3]; // +3 for the extension and null terminator
+void deleteFile(char* map, char* dir, char* filename, FILE* floppy){
+    int i, j;
+    int fileFound = 0;
+    int dirEntry = -1;
+    int startSector = 0;
+    int sectorCount = 0;
+    char fileType;
+    char fullname[MAX_LENGTH_FILENAME + 3]; // +3 for the extension and null terminator
     
-//     // Search for file in directory
-//     for (i = 0; i < SECTOR_SIZE; i += 16) {
-//         if (dir[i] == 0) continue; // Skip empty entries
+    // Search for file in directory
+    for (i = 0; i < SECTOR_SIZE; i += 16) {
+        if (dir[i] == 0) continue; // Skip empty entries
         
-//         // Check if filename matches
-//         int match = 1;
-//         for (j = 0; j < MAX_LENGTH_FILENAME && filename[j] != '\0'; j++) {
-//             if (dir[i + j] != filename[j]) {
-//                 match = 0;
-//                 break;
-//             }
-//         }
-        
-//         if (match) {
-//             fileFound = 1;
-//             dirEntry = i;
-//             fileType = dir[i + 8];
-//             startSector = dir[i + 9];
-//             sectorCount = dir[i + 10];
-//             break;
-//         }
-//     }
+        // Check if filename matches
+        int match = 1;
+        for (j = 0; j < MAX_LENGTH_FILENAME && filename[j] != '\0'; j++) {
+            if (dir[i + j] != filename[j]) {
+                match = 0;
+                break;
+            }
+        }
+         // This is a failscheck to prevent the code to match a file with partial input.
+        // Before this check, it used to print out the contents of msg when I just inputted 'm'
+        // Now it verifies the remainder of the directory entry name is zeros.
+        if (match && filename[j] == '\0') {
+            // Verify remainder of directory entry name field is just zeros
+            for (; j < MAX_LENGTH_FILENAME; j++) {
+                if (dir[i + j] != 0) {
+                    match = 0;
+                    break;
+                }
+            }
+        }
+        if (match) {
+            fileFound = 1;
+            dirEntry = i;
+            fileType = dir[i + 8];
+            startSector = dir[i + 9];
+            sectorCount = dir[i + 10];
+            break;
+        }
+    }
     
-//     if (!fileFound) {
-//         printf("\n🔍 Cannot delete '%s': File not found on this floppy disk!\n\n", filename);
-//         return;
-//     }
+    if (!fileFound) {
+        printf("\n🔍 Cannot delete '%s': File not found on this floppy disk!\n\n", filename);
+        return;
+    }
     
-//     // Create the full filename with extension for display
-//     strncpy(fullname, filename, MAX_LENGTH_FILENAME);
-//     fullname[MAX_LENGTH_FILENAME] = '.';
-//     fullname[MAX_LENGTH_FILENAME + 1] = (fileType == TEXT_FILE) ? 't' : 'x';
-//     fullname[MAX_LENGTH_FILENAME + 2] = '\0';
+    // Create the full filename with extension for display
+    strncpy(fullname, filename, MAX_LENGTH_FILENAME);
+    fullname[MAX_LENGTH_FILENAME] = '.';
+    fullname[MAX_LENGTH_FILENAME + 1] = (fileType == TEXT_FILE) ? 't' : 'x';
+    fullname[MAX_LENGTH_FILENAME + 2] = '\0';
     
-//     // Ask for confirmation
-//     char confirm;
-//     printf("\n⚠️  WARNING: You are about to delete '%s'!\n", fullname);
-//     printf("   This will permanently remove the file from the disk.\n");
-//     printf("   Continue? (y/n): ");
-//     scanf(" %c", &confirm);
+    // Ask for confirmation
+    char confirm;
+    printf("\n⚠️  WARNING: You are about to delete '%s'!\n", fullname);
+    printf("   This will permanently remove the file from the disk.\n");
+    printf("   Continue? (y/n): ");
+    scanf(" %c", &confirm);
     
-//     if (confirm != 'y' && confirm != 'Y') {
-//         printf("\n✋ Deletion cancelled. Your file is safe!\n\n");
-//         return;
-//     }
+    if (confirm != 'y' && confirm != 'Y') {
+        printf("\n✋ Deletion cancelled. Your file is safe!\n\n");
+        return;
+    }
     
-//     // Clear directory entry (set first byte to 0)
-//     dir[dirEntry] = 0;
+    // Clear directory entry (set first byte to 0)
+    dir[dirEntry] = 0;
     
-//     // Free sectors in map
-//     for (i = 0; i < sectorCount; i++) {
-//         map[startSector + i] = 0;
-//     }
+    // Free sectors in map
+    for (i = 0; i < sectorCount; i++) {
+        map[startSector + i] = 0;
+    }
     
-//     // Write map and directory back to disk
-//     writeBackToDisk(map, dir, floppy);
+    // Write map and directory back to disk
+    writeBackToDisk(map, dir, floppy);
     
-//     printf("\n🗑️  Success! File '%s' has been deleted.\n", fullname);
-//     printf("   %d sectors (%d bytes) have been freed up.\n\n", 
-//            sectorCount, sectorCount * SECTOR_SIZE);
+    printf("\n🗑️  Success! File '%s' has been deleted.\n", fullname);
+    printf("   %d sectors (%d bytes) have been freed up.\n\n", 
+           sectorCount, sectorCount * SECTOR_SIZE);
 
 
-//}
+}
 
 // writes back to the disk
 // puts the original code that writes back the map and directory back to the disk into a function for reusability
@@ -425,7 +436,6 @@ void writeBackToDisk(char* map, char* dir, FILE* floppy){
     for (i = 0; i < SECTOR_SIZE; i++) fputc(dir[i], floppy);
 
 }
-
 
 
 
